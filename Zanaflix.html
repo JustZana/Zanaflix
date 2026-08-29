@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zanaflix - Geekie Ball Run</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        netflixRed: '#E50914',
+                        netflixDark: '#141414',
+                        netflixGray: '#808080'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            background-color: #141414;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Netflix Card Hover Mechanics */
+        .netflix-card-container {
+            position: relative;
+            display: inline-block;
+            transition: z-index 0.3s ease;
+            margin: 0 4px;
+        }
+
+        .netflix-scale-wrapper {
+            display: block;
+            width: 100%;
+            border-radius: 6px;
+            overflow: hidden;
+            background-color: #181818;
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-radius 0.3s ease;
+            transform-origin: center center;
+            will-change: transform;
+        }
+
+        .netflix-card-container:hover {
+            z-index: 60;
+        }
+
+        .netflix-card-container:hover .netflix-scale-wrapper {
+            transform: scale(1.45) translateY(-12px);
+            box-shadow: 0 10px 35px rgba(0,0,0,0.9);
+            border-radius: 6px 6px 6px 6px;
+        }
+
+        .netflix-card-container.edge-left:hover .netflix-scale-wrapper {
+            transform-origin: left center;
+            transform: scale(1.45) translateY(-12px);
+        }
+
+        .netflix-card-container.edge-right:hover .netflix-scale-wrapper {
+            transform-origin: right center;
+            transform: scale(1.45) translateY(-12px);
+        }
+
+        .netflix-media {
+            position: relative;
+            width: 100%;
+        }
+
+        .netflix-details {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.2s ease 0.05s;
+        }
+
+        .netflix-card-container:hover .netflix-details {
+            max-height: 240px;
+            opacity: 1;
+        }
+
+        input[type=range].seekbar {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range].seekbar:focus {
+            outline: none;
+        }
+        input[type=range].seekbar::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: linear-gradient(to right, #E50914 var(--value, 0%), rgba(255, 255, 255, 0.3) var(--value, 0%));
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+        input[type=range].seekbar:hover::-webkit-slider-runnable-track {
+            height: 6px;
+        }
+        input[type=range].seekbar::-webkit-slider-thumb {
+            height: 13px;
+            width: 13px;
+            border-radius: 50%;
+            background: #E50914;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -4.5px;
+            opacity: 0;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+        input[type=range].seekbar:hover::-webkit-slider-thumb,
+        .group\/seek:hover input[type=range].seekbar::-webkit-slider-thumb {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        input[type=range].volumebar {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range].volumebar:focus {
+            outline: none;
+        }
+        input[type=range].volumebar::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: linear-gradient(to right, #E50914 var(--volume-value, 100%), rgba(255, 255, 255, 0.3) var(--volume-value, 100%));
+            border-radius: 2px;
+        }
+        input[type=range].volumebar::-webkit-slider-thumb {
+            height: 11px;
+            width: 11px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -3.5px;
+        }
+
+        .controls-fade {
+            transition: opacity 0.3s ease;
+        }
+
+        @keyframes netflixPopUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .netflix-popup {
+            animation: netflixPopUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="selection:bg-netflixRed selection:text-white">
+
+    <nav id="navbar" class="fixed top-0 w-full z-50 transition-all duration-300 bg-gradient-to-b from-black/80 to-transparent px-4 md:px-12 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-8">
+            <h1 class="text-netflixRed text-3xl md:text-4xl font-extrabold tracking-wider cursor-pointer">ZANAFLIX</h1>
+            <ul class="hidden md:flex space-x-6 text-sm text-gray-300">
+                <li class="hover:text-white cursor-pointer font-medium">Home</li>
+                <li class="hover:text-white cursor-pointer">TV Shows</li>
+                <li class="hover:text-white cursor-pointer">Movies</li>
+                <li class="hover:text-white cursor-pointer">New & Popular</li>
+                <li class="hover:text-white cursor-pointer">My List</li>
+            </ul>
+        </div>
+        <div class="flex items-center space-x-5 text-gray-300">
+            <div class="relative flex items-center">
+                <div id="searchContainer" class="hidden absolute right-0 bg-black/90 border border-gray-700 rounded px-3 py-1.5 flex items-center space-x-2 transition-all">
+                    <input type="text" id="searchInput" placeholder="Titles, people, genres" class="bg-transparent text-sm text-white focus:outline-none w-48 md:w-64" oninput="handleSearch(this.value)">
+                    <i class="fa-solid fa-xmark text-gray-400 hover:text-white cursor-pointer text-xs" onclick="toggleSearch()"></i>
+                </div>
+                <i id="searchIconBtn" class="fa-solid fa-magnifying-glass text-lg cursor-pointer hover:text-white" onclick="toggleSearch()"></i>
+            </div>
+            <i class="fa-solid fa-bell text-lg cursor-pointer hover:text-white"></i>
+            <div class="flex items-center space-x-2 cursor-pointer group">
+                <div class="w-8 h-8 rounded bg-netflixRed flex items-center justify-center font-bold text-white">Z</div>
+                <i class="fa-solid fa-caret-down text-xs group-hover:rotate-180 transition-transform"></i>
+            </div>
+        </div>
+    </nav>
+
+    <div id="searchResultsSection" class="fixed inset-0 z-40 bg-[#141414] pt-28 px-4 md:px-12 hidden overflow-y-auto">
+        <h2 class="text-xl md:text-2xl font-bold mb-6 text-white">Explore Titles</h2>
+        <div id="searchResultsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pb-12"></div>
+    </div>
+
+    <header id="heroSection" class="relative h-[80vh] md:h-[90vh] flex items-center px-4 md:px-12 overflow-hidden bg-black">
+        <div class="absolute inset-0 z-0 overflow-hidden opacity-80">
+            <video id="heroVideo" autoplay muted loop playsinline class="w-full h-full object-cover scale-105">
+                <source src="https://files.catbox.moe/82nqlo.mp4" type="video/mp4">
+            </video>
+            <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-[#141414] via-transparent to-black/60"></div>
+            <div class="absolute inset-0 pointer-events-none bg-gradient-to-r from-[#141414] via-transparent to-transparent"></div>
+        </div>
+
+        <div class="max-w-xl z-10 space-y-4 pt-20 pointer-events-auto">
+            <img src="https://files.catbox.moe/392v4j.png" alt="Geekie Ball Run Logo" class="w-64 md:w-80 drop-shadow-lg">
+            <p class="text-sm md:text-base text-gray-200 drop-shadow line-clamp-3">
+                From San Diego to New York across an unforgiving frontier, the cross-country horse race begins. Stakes are high, secrets are buried deep, and a bizarre spinning power changes the rules of the West forever.
+            </p>
+            <div class="flex space-x-4 pt-2">
+                <button onclick="openPlayer(0)" class="flex items-center justify-center bg-white text-black font-bold px-6 py-2.5 rounded hover:bg-opacity-80 transition duration-200 shadow-lg cursor-pointer">
+                    <i class="fa-solid fa-play mr-2 text-lg"></i> Play
+                </button>
+                <button onclick="openModal('Geekie Ball Run', 'https://files.catbox.moe/82nqlo.mp4', 'From San Diego to New York across an unforgiving frontier, the cross-country horse race begins. Stakes are high, secrets are buried deep, and a bizarre spinning power changes the rules of the West forever.', '2026', '16+', '1 Season', 'Wangan Joestar, Sven Zeppeli, Gishler Brando, Sand Y, Teoloco, Amss Geekie, Eden Geekie', 'Sci-Fi & Fantasy Anime, Action Anime, Japanese', 0, '1st STAGE', 'https://files.catbox.moe/392v4j.png', true)" class="flex items-center justify-center bg-gray-500/70 text-white font-bold px-6 py-2.5 rounded hover:bg-gray-500/50 transition duration-200 backdrop-blur-sm cursor-pointer">
+                    <i class="fa-solid fa-circle-info mr-2 text-lg"></i> More Info
+                </button>
+            </div>
+        </div>
+
+        <div class="absolute right-12 bottom-20 z-30 hidden md:flex items-center pointer-events-auto">
+            <button onclick="toggleHeroSound()" id="soundToggleBtn" class="w-12 h-12 rounded-full border border-gray-400 bg-black/60 text-white flex items-center justify-center hover:border-white hover:scale-110 transition backdrop-blur-md cursor-pointer shadow-xl">
+                <i id="soundIcon" class="fa-solid fa-volume-xmark text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="space-y-8 pb-24 -mt-24 md:-mt-32 relative z-20">
+        <section class="px-4 md:px-12">
+            <h2 class="text-lg md:text-xl font-bold mb-3">Trending Now</h2>
+            <div class="relative">
+                <div id="row1" class="flex space-x-4 overflow-x-auto no-scrollbar pb-20 pt-12 px-2"></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="infoModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-2 md:p-6 overflow-y-auto">
+        <div class="bg-[#181818] w-full max-w-3xl rounded-lg overflow-hidden shadow-2xl relative text-white my-auto">
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-30 bg-[#181818] hover:bg-netflixRed text-white w-9 h-9 rounded-full flex items-center justify-center transition cursor-pointer shadow-md">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div id="modalHeaderArea" class="relative h-64 md:h-80 bg-black">
+                <video id="modalVideo" autoplay loop playsinline class="w-full h-full object-cover hidden">
+                    <source src="" type="video/mp4">
+                </video>
+                <div id="modalHeaderGradient" class="absolute inset-0 bg-gradient-to-t from-[#181818] via-transparent to-black/40"></div>
+                
+                <div class="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                    <div id="modalLogoContainer">
+                        <img id="modalLogoImg" src="" alt="Show Logo" class="w-40 md:w-52 drop-shadow-md hidden">
+                        <h2 id="modalTitleHeading" class="text-2xl md:text-3xl font-extrabold tracking-wide drop-shadow-md hidden"></h2>
+                    </div>
+                    <div class="flex space-x-3 items-center">
+                        <button id="modalPlayBtn" class="bg-white text-black font-bold px-5 py-2 rounded flex items-center hover:bg-opacity-80 transition cursor-pointer">
+                            <i class="fa-solid fa-play mr-2"></i> Play
+                        </button>
+                        <button class="w-10 h-10 rounded-full border border-gray-400 bg-black/50 flex items-center justify-center hover:border-white transition cursor-pointer">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <button class="w-10 h-10 rounded-full border border-gray-400 bg-black/50 flex items-center justify-center hover:border-white transition cursor-pointer">
+                            <i class="fa-solid fa-thumbs-up"></i>
+                        </button>
+                        <button onclick="toggleModalSound()" id="modalSoundBtn" class="w-10 h-10 rounded-full border border-gray-400 bg-black/60 text-white flex items-center justify-center hover:border-white transition cursor-pointer shadow-lg ml-2 hidden">
+                            <i id="modalSoundIcon" class="fa-solid fa-volume-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="flex items-center space-x-3 text-sm text-gray-400">
+                    <span class="text-green-500 font-bold">98% Match</span>
+                    <span id="modalYear">2026</span>
+                    <span id="modalRating" class="border border-gray-500 px-1 text-xs">16+</span>
+                    <span id="modalSeasons">1 Season</span>
+                    <span class="border border-gray-500 px-1 text-xs rounded">HD</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 space-y-2">
+                        <p id="modalDesc" class="text-sm text-gray-200 leading-relaxed"></p>
+                    </div>
+                    <div class="text-xs space-y-1 text-gray-400">
+                        <p><span class="text-gray-500">Cast:</span> <span id="modalCast"></span></p>
+                        <p><span class="text-gray-500">Genres:</span> <span id="modalGenres"></span></p>
+                        <p><span class="text-gray-500">This Show Is:</span> Exciting</p>
+                    </div>
+                </div>
+
+                <div id="episodesSectionContainer" class="pt-4 border-t border-gray-800">
+                    <h3 class="text-lg font-bold mb-4">Episodes <span id="modalStageName" class="text-sm text-gray-400 font-normal"></span></h3>
+                    
+                    <div id="modalEpisodeCard1" onclick="openPlayer(0)" class="bg-[#2a2a2a] rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:bg-[#333] transition mb-3">
+                        <span class="text-xl font-bold text-gray-400">1</span>
+                        <div class="relative w-28 aspect-video bg-black rounded overflow-hidden flex-shrink-0">
+                            <img src="https://files.catbox.moe/qvgpp0.png" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/40"><i class="fa-solid fa-play text-white"></i></div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-center">
+                                <h4 class="font-bold text-sm">Geekie Ball Run: Part 1</h4>
+                                <span class="text-xs text-gray-400">6m 18s</span>
+                            </div>
+                            <p class="text-xs text-gray-400 line-clamp-2 mt-1">The cross-country race across America begins as Wangan Joestar crosses paths with Sven Zeppeli...</p>
+                        </div>
+                    </div>
+
+                    <div id="modalEpisodeCard2" onclick="openPlayer(1)" class="bg-[#2a2a2a] rounded-lg p-4 flex items-center space-x-4 cursor-pointer hover:bg-[#333] transition">
+                        <span class="text-xl font-bold text-gray-400">2</span>
+                        <div class="relative w-28 aspect-video bg-black rounded overflow-hidden flex-shrink-0">
+                            <img src="https://files.catbox.moe/uiupg5.png" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 flex items-center justify-center bg-black/40"><i class="fa-solid fa-play text-white"></i></div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-center">
+                                <h4 class="font-bold text-sm">Geekie Ball Run: Part 2</h4>
+                                <span class="text-xs text-gray-400">8m 15s</span>
+                            </div>
+                            <p class="text-xs text-gray-400 line-clamp-2 mt-1">After a fateful encounter with outlaw Sven Zeppeli, former racing prodigy Wangan Joestar enters the Geekie Ball Run...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="videoModal" class="fixed inset-0 z-50 bg-black hidden flex flex-col select-none">
+        <div id="playerWrapper" class="w-full h-full flex items-center justify-center bg-black relative cursor-pointer" onclick="togglePlayPause()">
+            <video id="videoElement" class="w-full h-full object-contain pointer-events-none">
+                Your browser does not support the video tag.
+            </video>
+
+            <div id="nextEpisodePrompt" class="absolute bottom-24 right-12 z-40 hidden netflix-popup pointer-events-auto" onclick="event.stopPropagation()">
+                <div class="bg-[#181818] border border-gray-700/80 rounded-md shadow-2xl p-4 flex items-center space-x-4 w-96 backdrop-blur-md">
+                    <div class="relative w-28 aspect-video bg-black rounded overflow-hidden flex-shrink-0">
+                        <img id="nextPromptThumb" src="https://files.catbox.moe/uiupg5.png" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/30"><i class="fa-solid fa-play text-white text-xs"></i></div>
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Next Episode</p>
+                        <h4 id="nextPromptTitle" class="text-xs font-bold text-white mt-0.5">Geekie Ball Run: Part 2</h4>
+                        <div class="flex space-x-2 mt-2">
+                            <button onclick="playNextEpisode()" class="bg-white hover:bg-opacity-80 text-black text-xs font-bold px-3 py-1.5 rounded flex items-center transition cursor-pointer">
+                                <i class="fa-solid fa-play mr-1.5 text-[10px]"></i> Play Now
+                            </button>
+                            <button onclick="dismissNextPrompt()" class="bg-[#333] hover:bg-[#444] text-white text-xs font-semibold px-3 py-1.5 rounded transition cursor-pointer">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="customControls" class="absolute inset-0 flex flex-col justify-between p-6 bg-gradient-to-t from-black/85 via-transparent to-black/60 controls-fade opacity-15 pointer-events-auto" onclick="event.stopPropagation()">
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <button onclick="closePlayer()" class="text-white hover:text-gray-300 transition text-xl cursor-pointer">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <h3 id="playerTitle" class="text-lg md:text-xl font-bold text-white drop-shadow">Streaming Title</h3>
+                    </div>
+                    <div class="flex items-center space-x-4 text-white">
+                        <button class="hover:text-netflixRed transition cursor-pointer text-lg">
+                            <i class="fa-solid fa-font-awesome"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-center pointer-events-none">
+                    <div id="centerPlayIcon" class="w-16 h-16 rounded-full bg-black/50 border border-white/20 flex items-center justify-center text-white text-2xl opacity-0 transition-opacity">
+                        <i id="centerIcon" class="fa-solid fa-play ml-1"></i>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-3 w-full group/seek">
+                        <input type="range" id="seekBar" value="0" min="0" max="100" step="0.1" class="w-full seekbar cursor-pointer" oninput="seekVideo(this.value)" onchange="seekVideo(this.value)">
+                    </div>
+
+                    <div class="flex items-center justify-between text-white">
+                        <div class="flex items-center space-x-6">
+                            <button onclick="togglePlayPause()" class="text-xl hover:text-netflixRed transition cursor-pointer">
+                                <i id="playPauseIcon" class="fa-solid fa-pause"></i>
+                            </button>
+                            <button onclick="skipTime(-10)" class="text-xl hover:text-netflixRed transition cursor-pointer" title="Rewind 10 seconds">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                            <button onclick="skipTime(10)" class="text-xl hover:text-netflixRed transition cursor-pointer" title="Fast forward 10 seconds">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                            <div class="flex items-center space-x-2 group/vol">
+                                <button onclick="toggleMute()" class="text-xl hover:text-netflixRed transition cursor-pointer">
+                                    <i id="volumeIcon" class="fa-solid fa-volume-high"></i>
+                                </button>
+                                <input type="range" id="volumeBar" value="100" min="0" max="100" class="w-20 volumebar cursor-pointer" oninput="setVolume(this.value)">
+                            </div>
+                            <span id="timeDisplay" class="text-xs text-gray-300 font-medium">0:00 / 0:00</span>
+                        </div>
+
+                        <div class="flex items-center space-x-6">
+                            <button class="text-lg hover:text-netflixRed transition cursor-pointer" title="Audio & Subtitles">
+                                <i class="fa-regular fa-comment-dots"></i>
+                            </button>
+                            <button id="nextEpBtn" onclick="playNextEpisode()" class="text-lg hover:text-netflixRed transition cursor-pointer hidden" title="Next Part">
+                                <i class="fa-solid fa-forward-step"></i>
+                            </button>
+                            <button onclick="FullScreen()" class="text-lg hover:text-netflixRed transition cursor-pointer" title="Full Screen">
+                                <i id="fullscreenIcon" class="fa-solid fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <footer class="max-w-4xl mx-auto px-4 py-12 text-gray-500 text-xs space-y-4 border-t border-gray-800/50">
+        <div class="flex space-x-4 text-lg text-white">
+            <i class="fa-brands fa-facebook-f cursor-pointer hover:text-netflixRed"></i>
+            <i class="fa-brands fa-instagram cursor-pointer hover:text-netflixRed"></i>
+            <i class="fa-brands fa-twitter cursor-pointer hover:text-netflixRed"></i>
+            <i class="fa-brands fa-youtube cursor-pointer hover:text-netflixRed"></i>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <p class="hover:underline cursor-pointer">Audio Description</p>
+            <p class="hover:underline cursor-pointer">Help Center</p>
+            <p class="hover:underline cursor-pointer">Gift Cards</p>
+            <p class="hover:underline cursor-pointer">Media Center</p>
+        </div>
+        <p>© 2026 Zanaflix, Inc.</p>
+    </footer>
+
+    <script>
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 100) {
+                navbar.classList.add('bg-netflixDark');
+            } else {
+                navbar.classList.remove('bg-netflixDark');
+            }
+        });
+
+        const heroSection = document.getElementById('heroSection');
+        const heroVid = document.getElementById('heroVideo');
+
+        window.addEventListener('DOMContentLoaded', () => {
+            heroVid.muted = true;
+            heroVid.play().catch(err => {
+                console.log("Autoplay blocked, waiting for interaction");
+            });
+            populateRow('row1', moviesData);
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) {
+                    heroVid.pause();
+                } else {
+                    if (!activeHoverVideo && !isVideoPlayerOpen) {
+                        heroVid.play().catch(err => console.log(err));
+                    }
+                }
+            });
+        }, { threshold: 0.2 });
+
+        observer.observe(heroSection);
+
+        function toggleHeroSound() {
+            const soundIcon = document.getElementById('soundIcon');
+            if (heroVid.muted) {
+                // Unmuting hero: mute/pause active hover video if any
+                if (activeHoverVideo) {
+                    activeHoverVideo.pause();
+                    activeHoverVideo = null;
+                }
+                heroVid.muted = false;
+                soundIcon.className = "fa-solid fa-volume-high text-lg";
+            } else {
+                heroVid.muted = true;
+                soundIcon.className = "fa-solid fa-volume-xmark text-lg";
+            }
+        }
+
+        function toggleModalSound() {
+            const modalVid = document.getElementById('modalVideo');
+            const modalSoundIcon = document.getElementById('modalSoundIcon');
+            if (modalVid.muted) {
+                heroVid.muted = true;
+                document.getElementById('soundIcon').className = "fa-solid fa-volume-xmark text-lg";
+                modalVid.muted = false;
+                modalSoundIcon.className = "fa-solid fa-volume-high";
+            } else {
+                modalVid.muted = true;
+                modalSoundIcon.className = "fa-solid fa-volume-xmark";
+            }
+        }
+
+        const episodesList = [
+            {
+                title: "Geekie Ball Run - Geekie Ball Run: Part 1",
+                url: "https://files.catbox.moe/7d7hzx.mp4",
+                partName: "Geekie Ball Run: Part 2",
+                thumb: "https://files.catbox.moe/uiupg5.png"
+            },
+            {
+                title: "Geekie Ball Run - Geekie Ball Run: Part 2",
+                url: "https://files.catbox.moe/wpgxij.mp4",
+                partName: null,
+                thumb: ""
+            }
+        ];
+
+        let currentEpisodeIndex = 0;
+
+        const moviesData = [
+            {
+                title: "Geekie Ball Run",
+                displayTitle: "Geekie Ball Run",
+                img: "https://files.catbox.moe/v5ouka.png",
+                logoUrl: "https://files.catbox.moe/392v4j.png",
+                hasLogoImage: true,
+                trailerUrl: "https://files.catbox.moe/82nqlo.mp4",
+                videoUrl: "https://files.catbox.moe/7d7hzx.mp4",
+                year: "2026",
+                rating: "16+",
+                seasons: "1 Season",
+                desc: "From San Diego to New York across an unforgiving frontier, the cross-country horse race begins. Stakes are high, secrets are buried deep, and a bizarre spinning power changes the rules of the West forever.",
+                cast: "Wangan Joestar, Sven Zeppeli, Gishler Brando, Sand Y, Teoloco, Amss Geekie, Eden Geekie",
+                genres: "Sci-Fi & Fantasy Anime, Action Anime, Japanese",
+                stageName: "1st STAGE",
+                index: 0
+            },
+            {
+                title: "Weekly Fanaf News",
+                displayTitle: "Weekly Fanaf News",
+                img: "https://files.catbox.moe/c1355e.png",
+                logoUrl: "",
+                hasLogoImage: false,
+                trailerUrl: "",
+                videoUrl: "",
+                year: "2026",
+                rating: "12+",
+                seasons: "1 Season",
+                desc: "Your weekly update covering all things related to the Fazbear universe, animatronic updates, and community highlights from Geekie Productions.",
+                cast: "Geekie Productions Crew",
+                genres: "News, Gaming, Reality",
+                stageName: "SEASON 1",
+                index: null
+            }
+        ];
+
+        let activeHoverVideo = null;
+        let hoverTimeout = null;
+        let isVideoPlayerOpen = false;
+
+        function populateRow(elementId, movies) {
+            const rowContainer = document.getElementById(elementId);
+            rowContainer.innerHTML = '';
+            movies.forEach((movie, idx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "flex-none netflix-card-container w-48 md:w-64";
+                
+                if (idx === 0) wrapper.classList.add('edge-left');
+                if (idx === movies.length - 1) wrapper.classList.add('edge-right');
+
+                const scaleWrapper = document.createElement('div');
+                scaleWrapper.className = "netflix-scale-wrapper shadow-md";
+
+                const media = document.createElement('div');
+                media.className = "netflix-media aspect-video bg-gray-800 cursor-pointer overflow-hidden flex items-center justify-center group";
+
+                media.innerHTML = `
+                    <img src="${movie.img}" alt="${movie.title}" class="w-full h-full object-cover thumbnail-img transition duration-300">
+                    
+                    ${movie.hasLogoImage ? `
+                        <div class="absolute bottom-3 left-3 z-10 pointer-events-none logo-overlay">
+                            <img src="${movie.logoUrl}" alt="${movie.title} Logo" class="w-24 drop-shadow">
+                        </div>
+                    ` : `
+                        <div class="absolute bottom-3 left-3 z-10 pointer-events-none logo-overlay">
+                            <h3 class="text-white font-bold text-sm drop-shadow">${movie.displayTitle}</h3>
+                        </div>
+                    `}
+                `;
+
+                // Handle hover preview (Netflix style: delayed thumbnail swap to continuous playing trailer without cutting off)
+                wrapper.addEventListener('mouseenter', () => {
+                    if (isVideoPlayerOpen) return;
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = setTimeout(() => {
+                        if (!movie.trailerUrl) return;
+
+                        // Stop other active hover videos
+                        if (activeHoverVideo && activeHoverVideo !== videoEl) {
+                            activeHoverVideo.pause();
+                            activeHoverVideo.parentElement.innerHTML = originalMediaHTML;
+                        }
+
+                        const thumbImg = media.querySelector('.thumbnail-img');
+                        const logoOv = media.querySelector('.logo-overlay');
+                        if (thumbImg) thumbImg.style.display = 'none';
+                        if (logoOv) logoOv.style.display = 'none';
+
+                        let videoEl = media.querySelector('video');
+                        if (!videoEl) {
+                            videoEl = document.createElement('video');
+                            videoEl.src = movie.trailerUrl;
+                            videoEl.autoplay = true;
+                            videoEl.muted = true;
+                            videoEl.loop = true;
+                            videoEl.playsInline = true;
+                            videoEl.className = "absolute inset-0 w-full h-full object-cover";
+                            media.appendChild(videoEl);
+
+                            // Add hover audio toggle button
+                            const soundBtn = document.createElement('button');
+                            soundBtn.className = "absolute bottom-3 right-3 z-20 w-8 h-8 rounded-full border border-gray-400 bg-black/60 text-white flex items-center justify-center hover:border-white transition cursor-pointer";
+                            soundBtn.innerHTML = `<i class="fa-solid fa-volume-xmark text-xs"></i>`;
+                            soundBtn.onclick = (e) => {
+                                e.stopPropagation();
+                                // Pause hero audio if unmuting hover card
+                                if (videoEl.muted) {
+                                    heroVid.muted = true;
+                                    document.getElementById('soundIcon').className = "fa-solid fa-volume-xmark text-lg";
+                                    videoEl.muted = false;
+                                    soundBtn.innerHTML = `<i class="fa-solid fa-volume-high text-xs"></i>`;
+                                } else {
+                                    videoEl.muted = true;
+                                    soundBtn.innerHTML = `<i class="fa-solid fa-volume-xmark text-xs"></i>`;
+                                }
+                            };
+                            media.appendChild(soundBtn);
+                        } else {
+                            videoEl.play();
+                        }
+                        activeHoverVideo = videoEl;
+                    }, 400); // 400ms delay like Netflix
+                });
+
+                wrapper.addEventListener('mouseleave', () => {
+                    clearTimeout(hoverTimeout);
+                    const videoEl = media.querySelector('video');
+                    const soundBtn = media.querySelector('button');
+                    const thumbImg = media.querySelector('.thumbnail-img');
+                    const logoOv = media.querySelector('.logo-overlay');
+
+                    if (videoEl) {
+                        videoEl.pause();
+                        videoEl.remove();
+                    }
+                    if (soundBtn) soundBtn.remove();
+                    if (thumbImg) thumbImg.style.display = 'block';
+                    if (logoOv) logoOv.style.display = 'block';
+                    if (activeHoverVideo === videoEl) activeHoverVideo = null;
+                });
+
+                // Click video thumbnail inside hovered card to open bigger preview modal
+                media.addEventListener('click', () => {
+                    openModal(
+                        movie.title,
+                        movie.trailerUrl,
+                        movie.desc,
+                        movie.year,
+                        movie.rating,
+                        movie.seasons,
+                        movie.cast,
+                        movie.genres,
+                        movie.index,
+                        movie.stageName,
+                        movie.logoUrl,
+                        movie.hasLogoImage
+                    );
+                });
+
+                const details = document.createElement('div');
+                details.className = "netflix-details bg-[#181818] p-4 space-y-3";
+                details.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="openPlayer(${movie.index !== null ? movie.index : 0})" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-gray-200 transition cursor-pointer shadow">
+                                <i class="fa-solid fa-play text-xs ml-0.5"></i>
+                            </button>
+                            <button onclick="openModal('${movie.title}', '${movie.trailerUrl}', \`${movie.desc}\`, '${movie.year}', '${movie.rating}', '${movie.seasons}', '${movie.cast}', '${movie.genres}', ${movie.index}, '${movie.stageName}', '${movie.logoUrl}', ${movie.hasLogoImage})" class="w-8 h-8 rounded-full border border-gray-400 bg-black/40 text-white flex items-center justify-center hover:border-white transition cursor-pointer">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                            </button>
+                            <button class="w-8 h-8 rounded-full border border-gray-400 bg-black/40 text-white flex items-center justify-center hover:border-white transition cursor-pointer">
+                                <i class="fa-solid fa-thumbs-up text-xs"></i>
+                            </button>
+                        </div>
+                        <button onclick="openModal('${movie.title}', '${movie.trailerUrl}', \`${movie.desc}\`, '${movie.year}', '${movie.rating}', '${movie.seasons}', '${movie.cast}', '${movie.genres}', ${movie.index}, '${movie.stageName}', '${movie.logoUrl}', ${movie.hasLogoImage})" class="w-8 h-8 rounded-full border border-gray-400 bg-black/40 text-white flex items-center justify-center hover:border-white transition cursor-pointer">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs text-gray-400 font-medium">
+                        <span class="text-green-500 font-bold">98% Match</span>
+                        <span class="border border-gray-600 px-1 text-[10px]">${movie.rating}</span>
+                        <span>${movie.seasons}</span>
+                        <span class="border border-gray-600 px-1 text-[10px] rounded">HD</span>
+                    </div>
+                    <p class="text-xs text-gray-300 line-clamp-1">${movie.genres}</p>
+                `;
+
+                scaleWrapper.appendChild(media);
+                scaleWrapper.appendChild(details);
+                wrapper.appendChild(scaleWrapper);
+                rowContainer.appendChild(wrapper);
+            });
+        }
+
+        function toggleSearch() {
+            const container = document.getElementById('searchContainer');
+            const searchResults = document.getElementById('searchResultsSection');
+            const input = document.getElementById('searchInput');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                input.focus();
+            } else {
+                container.classList.add('hidden');
+                searchResults.classList.add('hidden');
+                input.value = '';
+            }
+        }
+
+        function handleSearch(query) {
+            const searchResults = document.getElementById('searchResultsSection');
+            const grid = document.getElementById('searchResultsGrid');
+            if (!query.trim()) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+            searchResults.classList.remove('hidden');
+            const filtered = moviesData.filter(m => m.title.toLowerCase().includes(query.toLowerCase()) || m.genres.toLowerCase().includes(query.toLowerCase()));
+            grid.innerHTML = '';
+            if (filtered.length === 0) {
+                grid.innerHTML = '<p class="text-gray-400 text-sm col-span-full">No titles found matching your search.</p>';
+                return;
+            }
+            filtered.forEach(movie => {
+                const card = document.createElement('div');
+                card.className = "bg-[#181818] rounded-md overflow-hidden shadow cursor-pointer hover:scale-105 transition duration-200";
+                card.innerHTML = `
+                    <div class="aspect-video bg-black relative">
+                        <img src="${movie.img}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-3">
+                        <h4 class="font-bold text-sm text-white">${movie.displayTitle}</h4>
+                        <p class="text-xs text-gray-400 mt-1">${movie.year} • ${movie.rating}</p>
+                    </div>
+                `;
+                card.onclick = () => {
+                    toggleSearch();
+                    openModal(movie.title, movie.trailerUrl, movie.desc, movie.year, movie.rating, movie.seasons, movie.cast, movie.genres, movie.index, movie.stageName, movie.logoUrl, movie.hasLogoImage);
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        function openModal(title, trailerUrl, desc, year, rating, seasons, cast, genres, epIndex, stageName, logoUrl, hasLogoImage) {
+            // Pause hero and active hover previews when modal opens with trailer audio
+            heroVid.pause();
+            if (activeHoverVideo) {
+                activeHoverVideo.pause();
+                activeHoverVideo = null;
+            }
+
+            const modal = document.getElementById('infoModal');
+            const modalVid = document.getElementById('modalVideo');
+            const modalLogoImg = document.getElementById('modalLogoImg');
+            const modalTitleHeading = document.getElementById('modalTitleHeading');
+            
+            document.getElementById('modalDesc').innerText = desc;
+            document.getElementById('modalYear').innerText = year;
+            document.getElementById('modalRating').innerText = rating;
+            document.getElementById('modalSeasons').innerText = seasons;
+            document.getElementById('modalCast').innerText = cast;
+            document.getElementById('modalGenres').innerText = genres;
+            document.getElementById('modalStageName').innerText = stageName;
+
+            const playBtn = document.getElementById('modalPlayBtn');
+            if (epIndex !== null && epIndex !== undefined) {
+                playBtn.onclick = () => { openPlayer(epIndex); closeModal(); };
+            } else {
+                playBtn.onclick = () => { closeModal(); };
+            }
+
+            if (hasLogoImage && logoUrl) {
+                modalLogoImg.src = logoUrl;
+                modalLogoImg.classList.remove('hidden');
+                modalTitleHeading.classList.add('hidden');
+            } else {
+                modalTitleHeading.innerText = title;
+                modalTitleHeading.classList.remove('hidden');
+                modalLogoImg.classList.add('hidden');
+            }
+
+            if (trailerUrl) {
+                modalVid.src = trailerUrl;
+                modalVid.classList.remove('hidden');
+                modalVid.muted = false; // Netflix modal trailers auto-play with sound
+                document.getElementById('modalSoundBtn').classList.remove('hidden');
+                document.getElementById('modalSoundIcon').className = "fa-solid fa-volume-high";
+                modalVid.play().catch(e => console.log(e));
+            } else {
+                modalVid.classList.add('hidden');
+                document.getElementById('modalSoundBtn').classList.add('hidden');
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('infoModal');
+            const modalVid = document.getElementById('modalVideo');
+            modalVid.pause();
+            modalVid.src = "";
+            modal.classList.add('hidden');
+            // Resume hero video when modal closes
+            heroVid.play().catch(e => console.log(e));
+        }
+
+        const videoModal = document.getElementById('videoModal');
+        const videoElement = document.getElementById('videoElement');
+        const seekBar = document.getElementById('seekBar');
+        const volumeBar = document.getElementById('volumeBar');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const playPauseIcon = document.getElementById('playPauseIcon');
+        const centerPlayIcon = document.getElementById('centerPlayIcon');
+        const centerIcon = document.getElementById('centerIcon');
+        const volumeIcon = document.getElementById('volumeIcon');
+        const playerTitle = document.getElementById('playerTitle');
+        const nextEpisodePrompt = document.getElementById('nextEpisodePrompt');
+        const nextEpBtn = document.getElementById('nextEpBtn');
+
+        let controlsTimeout;
+
+        function openPlayer(index) {
+            // Mute/pause hero and modal trailers when opening episode player
+            heroVid.muted = true;
+            heroVid.pause();
+            const modalVid = document.getElementById('modalVideo');
+            modalVid.pause();
+
+            currentEpisodeIndex = index;
+            const ep = episodesList[index];
+            videoElement.src = ep.url;
+            playerTitle.innerText = ep.title;
+
+            if (ep.partName) {
+                document.getElementById('nextPromptTitle').innerText = ep.partName;
+                document.getElementById('nextPromptThumb').src = ep.thumb;
+                nextEpBtn.classList.remove('hidden');
+            } else {
+                nextEpBtn.classList.add('hidden');
+            }
+
+            videoModal.classList.remove('hidden');
+            nextEpisodePrompt.classList.add('hidden');
+            videoElement.play();
+            playPauseIcon.className = "fa-solid fa-pause";
+        }
+
+        function closePlayer() {
+            videoElement.pause();
+            videoModal.classList.add('hidden');
+            heroVid.play().catch(e => console.log(e));
+        }
+
+        function togglePlayPause() {
+            if (videoElement.paused) {
+                videoElement.play();
+                playPauseIcon.className = "fa-solid fa-pause";
+                centerIcon.className = "fa-solid fa-play ml-1";
+                showCenterAnimation();
+            } else {
+                videoElement.pause();
+                playPauseIcon.className = "fa-solid fa-play";
+                centerIcon.className = "fa-solid fa-pause";
+                showCenterAnimation();
+            }
+        }
+
+        function showCenterAnimation() {
+            centerPlayIcon.style.opacity = '1';
+            setTimeout(() => {
+                centerPlayIcon.style.opacity = '0';
+            }, 400);
+        }
+
+        videoElement.addEventListener('timeupdate', () => {
+            if (!videoElement.duration) return;
+            const current = videoElement.currentTime;
+            const duration = videoElement.duration;
+            const percent = (current / duration) * 100;
+            seekBar.value = percent;
+            seekBar.style.setProperty('--value', percent + '%');
+            timeDisplay.innerText = formatTime(current) + ' / ' + formatTime(duration);
+
+            // Show next episode prompt near the end (e.g., last 15 seconds)
+            if (duration - current <= 15 && episodesList[currentEpisodeIndex].partName) {
+                nextEpisodePrompt.classList.remove('hidden');
+            }
+        });
+
+        videoElement.addEventListener('ended', () => {
+            if (currentEpisodeIndex < episodesList.length - 1) {
+                openPlayer(currentEpisodeIndex + 1);
+            } else {
+                closePlayer();
+            }
+        });
+
+        function seekVideo(val) {
+            const time = (val / 100) * videoElement.duration;
+            videoElement.currentTime = time;
+        }
+
+        function skipTime(seconds) {
+            videoElement.currentTime += seconds;
+        }
+
+        function setVolume(val) {
+            videoElement.volume = val / 100;
+            volumeBar.style.setProperty('--volume-value', val + '%');
+            if (val == 0) {
+                volumeIcon.className = "fa-solid fa-volume-xmark";
+            } else if (val < 50) {
+                volumeIcon.className = "fa-solid fa-volume-low";
+            } else {
+                volumeIcon.className = "fa-solid fa-volume-high";
+            }
+        }
+
+        function toggleMute() {
+            if (videoElement.muted) {
+                videoElement.muted = false;
+                setVolume(volumeBar.value);
+            } else {
+                videoElement.muted = true;
+                volumeIcon.className = "fa-solid fa-volume-xmark";
+                volumeBar.style.setProperty('--volume-value', '0%');
+            }
+        }
+
+        function FullScreen() {
+            if (!document.fullscreenElement) {
+                videoModal.requestFullscreen().catch(err => {
+                    alert(err.message);
+                });
+                document.getElementById('fullscreenIcon').className = "fa-solid fa-compress";
+            } else {
+                document.exitFullscreen();
+                document.getElementById('fullscreenIcon').className = "fa-solid fa-expand";
+            }
+        }
+
+        function playNextEpisode() {
+            if (currentEpisodeIndex < episodesList.length - 1) {
+                openPlayer(currentEpisodeIndex + 1);
+            }
+        }
+
+        function dismissNextPrompt() {
+            nextEpisodePrompt.classList.add('hidden');
+        }
+
+        // Auto-hide controls in video player after inactivity
+        const customControls = document.getElementById('customControls');
+        videoModal.addEventListener('mousemove', () => {
+            customControls.style.opacity = '1';
+            clearTimeout(controlsTimeout);
+            controlsTimeout = setTimeout(() => {
+                if (!videoElement.paused) {
+                    customControls.style.opacity = '0';
+                }
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
