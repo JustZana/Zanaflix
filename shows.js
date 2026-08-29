@@ -45,7 +45,7 @@ const episodesList = [
         title: "Geekie Ball Run - Geekie Ball Run: Part 1",
         url: "https://files.catbox.moe/7d7hzx.mp4",
         partName: "Geekie Ball Run: Part 2",
-        thumb: "https://files.catbox.moe/uiupg5.png",
+        thumb: "https://files.catbox.moe/qvgpp0.png",
         duration: "6m 18s",
         desc: "The cross-country race across America begins as Wangan Joestar crosses paths with Sven Zeppeli..."
     },
