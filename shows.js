@@ -13,7 +13,7 @@ const moviesData = [
         year: "2026",
         rating: "16+",
         seasons: "1 Season",
-        desc: "From San Diego to New York across an unforgiving frontier, the cross-country horse race begins. Stakes are high, secrets are buried deep, and a bizarre spinning power changes the rules of the West forever.",
+        desc: "In the American Old West, the world's greatest race is about to begin. Thousands line up in San Diego to travel over six thousand kilometers for a chance to win the grand prize of fifty million dollars...",
         cast: "Wangan Joestar, Sven Zeppeli, Gishler Brando, Sand Y, Teoloco, Amss Geekie, Eden Geekie",
         genres: "Sci-Fi & Fantasy Anime, Action Anime, Japanese",
         stageName: "1st STAGE",
@@ -45,7 +45,7 @@ const episodesList = [
         title: "Geekie Ball Run - Geekie Ball Run: Part 1",
         url: "https://files.catbox.moe/7d7hzx.mp4",
         partName: "Geekie Ball Run: Part 2",
-        thumb: "https://files.catbox.moe/qvgpp0.png",
+        thumb: "https://files.catbox.moe/uiupg5.png",
         duration: "6m 18s",
         desc: "The cross-country race across America begins as Wangan Joestar crosses paths with Sven Zeppeli..."
     },
